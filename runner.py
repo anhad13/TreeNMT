@@ -103,7 +103,8 @@ class DecoderLSTM(object):
 
 
 
-glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+#glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+glovePath="/scratch/am8676/glove.840B.300d.txt"
 source_train_file="data/enpr.s"
 destination_train_file="data/trainde.s"
 source_vocab = glove2dict(glovePath)
@@ -116,7 +117,7 @@ source_data= dataparser.read_tree_dataset(source_train_file, source_vocab)
 print("Loading Target Data")
 target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
 model = dy.Model()
-batch_size=5
+batch_size=32
 trainer = dy.AdamTrainer(model)
 encoder = EncoderTreeLSTM(model, len(source_vocab), 100, 100)
 decoder = DecoderLSTM(model, len(target_vocab), 100)

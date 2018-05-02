@@ -6,4 +6,4 @@
 #SBATCH --nodes=1
 #SBATCH --mem=50GB
 #SBATCH --output=out.STS.%j
-python runner.py
+python runner.py --dynet-mem 20000
