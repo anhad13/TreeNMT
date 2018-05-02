@@ -123,6 +123,7 @@ encoder = EncoderTreeLSTM(model, len(source_vocab), 100, 100)
 decoder = DecoderLSTM(model, len(target_vocab), 100)
 import time
 dy.renew_cg()
+filename=open("out.x.1", "w")
 start_time=time.time()
 losses=[]
 for j in range(len(source_data)):
@@ -138,6 +139,8 @@ for j in range(len(source_data)):
         trainer.update()
         difference=time.time()-start_time
         print(str(j)+"---"+str(difference)+":")
+        filename.write(str(j)+"---"+str(difference)+":")
+        filename.flush()
         losses=[]
         dy.renew_cg()
 
