@@ -67,31 +67,37 @@ class EncoderTreeLSTM(object):
         return h, c
 
 class DecoderLSTM(object):
-    def __init__(self, model, vocab_size, hdim, num_layers=1):
-        self.WS = [model.add_parameters((hdim, hdim*2)) for _ in "iou"]
-        self.US = [model.add_parameters((hdim, hdim*2)) for _ in "iou"]
-        self.UFS =[model.add_parameters((hdim, hdim*2)) for _ in "f"]
-        self.BS = [model.add_parameters(hdim*2) for _ in "iouf"]
+    def __init__(self, model, vocab_size, hidden_dim, num_layers=1):
+        self.WS = [model.add_parameters((hidden_dim, hidden_dim*2)) for _ in "iou"]
+        self.US = [model.add_parameters((hidden_dim, hidden_dim*2)) for _ in "iou"]
+        self.UFS =[model.add_parameters((hidden_dim, hidden_dim*2)) for _ in "f"]
+        self.BS = [model.add_parameters(hidden_dim) for _ in "iouf"]
         self.pre_l=model.add_parameters((hidden_dim, hidden_dim))
-        self.pred=model.add_parameters((hidden_dim,vocab_size))
+        self.pred=model.add_parameters((vocab_size, hidden_dim))
+        self.hdim=hidden_dim
     def decode(self, context, trg, decorate=False):
-        prev_out=dy.zeros((hdim, hdim))
+        prev_out=dy.zeros((self.hdim))
         outputs=[]
         for i in range(len(trg)):
+            #import pdb;pdb.set_trace()
             emb=dy.concatenate([context, prev_out])
             Ui,Uo,Uu = [dy.parameter(u) for u in self.US]
-            Uf1= [dy.parameter(u) for u in self.UFS]
+            Uf1= dy.parameter(self.UFS[0])
             bi,bo,bu,bf = [dy.parameter(b) for b in self.BS]
+            #import pdb;pdb.set_trace()
             i = dy.logistic(bi+Ui*emb)
             o = dy.logistic(bi+Uo*emb)
             f = dy.logistic(bf+Uf1*emb)
+            #print("hey")
             u = dy.tanh(bu+Uu*emb)
-            c = dy.cmult(i,u) + dy.cmult(f,c)
+            c = dy.cmult(i,u) + dy.cmult(f,prev_out)
             h = dy.cmult(o,dy.tanh(c))
             if decorate: tree._e = h
             prev_out=c
             pre1=dy.parameter(self.pre_l)
             pre2=dy.parameter(self.pred)
+            #h1=h
+            #import pdb;pdb.set_trace()
             outputs.append(pre2*pre1*h)
         return outputs
 
@@ -105,6 +111,32 @@ c=0
 for k in source_vocab.keys():
     source_vocab[k]=c
     c+=1
+print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab)
+print("Loading Target Data")
 target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
+model = dy.Model()
+batch_size=5
+trainer = dy.AdamTrainer(model)
+encoder = EncoderTreeLSTM(model, len(source_vocab), 100, 100)
+decoder = DecoderLSTM(model, len(target_vocab), 100)
+import time
+dy.renew_cg()
+start_time=time.time()
+losses=[]
+for j in range(len(source_data)):
+    out_enc=encoder.expr_for_tree(source_data[j])
+    outs=decoder.decode(out_enc[-1], target_data[j])
+    loss=[dy.pickneglogsoftmax(outs[k],target_data[j][k])for k in range(len(outs))]
+    loss=dy.esum(loss)
+    losses.append(loss)
+    print(j)
+    if j%batch_size==0:
+        net_loss=dy.esum(losses)/batch_size 
+        net_loss.backward()
+        trainer.update()
+        difference=time.time()-start_time
+        print(str(j)+"---"+str(difference)+":")
+        losses=[]
+        dy.renew_cg()
 
