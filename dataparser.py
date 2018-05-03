@@ -74,7 +74,7 @@ def convert_to_tree(tokens,transitions, vocab):
         elif transitions[i]==1:
             x1=h.pop()
             x2=h.pop()
-            h.append(Tree(None, [x1, x2]))
+            h.append(Tree(None, [x2, x1]))
         else:
             break
     return h.pop()
