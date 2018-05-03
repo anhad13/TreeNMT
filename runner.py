@@ -6,7 +6,8 @@ import re
 import codecs
 import csv
 import dataparser
-
+from evaluator import BLEUEvaluator as bleu_evaluator
+import pdb
 
 def glove2dict(src_filename):
     """GloVe Reader.
@@ -35,7 +36,7 @@ class EncoderTreeLSTM(object):
         self.E = model.add_lookup_parameters((vocab_size , wdim))
     def expr_for_tree(self, tree, decorate=False):
         if(tree.isleaf()):
-            E = dy.parameter(self.E)
+            E = self.E
             emb=E[tree.label]
             Wi,Wo,Wu   = [dy.parameter(w) for w in self.WS]
             bi,bo,bu,_ = [dy.parameter(b) for b in self.BS]
@@ -72,14 +73,13 @@ class DecoderLSTM(object):
         self.US = [model.add_parameters((hidden_dim, hidden_dim*2)) for _ in "iou"]
         self.UFS =[model.add_parameters((hidden_dim, hidden_dim*2)) for _ in "f"]
         self.BS = [model.add_parameters(hidden_dim) for _ in "iouf"]
-        self.pre_l=model.add_parameters((hidden_dim, hidden_dim))
+        #self.pre_l=model.add_parameters((hidden_dim, hidden_dim))
         self.pred=model.add_parameters((vocab_size, hidden_dim))
         self.hdim=hidden_dim
     def decode(self, context, trg, decorate=False):
         prev_out=dy.zeros((self.hdim))
         outputs=[]
         for i in range(len(trg)):
-            #import pdb;pdb.set_trace()
             emb=dy.concatenate([context, prev_out])
             Ui,Uo,Uu = [dy.parameter(u) for u in self.US]
             Uf1= dy.parameter(self.UFS[0])
@@ -94,33 +94,39 @@ class DecoderLSTM(object):
             h = dy.cmult(o,dy.tanh(c))
             if decorate: tree._e = h
             prev_out=c
-            pre1=dy.parameter(self.pre_l)
+            #pre1=dy.parameter(self.pre_l)
             pre2=dy.parameter(self.pred)
-            #h1=h
-            #import pdb;pdb.set_trace()
-            outputs.append(pre2*pre1*h)
+            outputs.append(dy.log_softmax(pre2*h))
         return outputs
 
 
 
-#glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
-glovePath="/scratch/am8676/glove.840B.300d.txt"
+glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+#glovePath="/scratch/am8676/glove.840B.300d.txt"
 source_train_file="data/enpr.s"
 destination_train_file="data/trainde.s"
+dev_source="data/dev_en.s"
+dev_target="data/dev_de.s"
+print("Building source vocab.")
 source_vocab = glove2dict(glovePath)
-c=0
+c1=1
 for k in source_vocab.keys():
-    source_vocab[k]=c
-    c+=1
+    source_vocab[k]=c1
+    c1+=1
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab)
 print("Loading Target Data")
 target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
+print("Loading Dev Source")
+dev_source_data=dataparser.read_tree_dataset(dev_source, source_vocab)
+print("Loading Dev Target")
+dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
-batch_size=32
+batch_size=10
+eval_every=batch_size*5
 trainer = dy.AdamTrainer(model)
-encoder = EncoderTreeLSTM(model, len(source_vocab), 100, 100)
-decoder = DecoderLSTM(model, len(target_vocab), 100)
+encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 100, 100)
+decoder = DecoderLSTM(model, len(target_vocab)+1, 100)
 import time
 dy.renew_cg()
 filename=open("out.x.1", "w")
@@ -132,7 +138,7 @@ for j in range(len(source_data)):
     loss=[dy.pickneglogsoftmax(outs[k],target_data[j][k])for k in range(len(outs))]
     loss=dy.esum(loss)
     losses.append(loss)
-    print(j)
+    #print(j)
     if j%batch_size==0:
         net_loss=dy.esum(losses)/batch_size 
         net_loss.backward()
@@ -143,4 +149,20 @@ for j in range(len(source_data)):
         filename.flush()
         losses=[]
         dy.renew_cg()
+    if j%eval_every==0:
+        total_loss=0.0
+        for i1 in range(len(dev_source_data)):
+            out_enc=encoder.expr_for_tree(dev_source_data[i1])
+            outs=decoder.decode(out_enc[-1], dev_target_data[i1])
+            loss=[dy.pickneglogsoftmax(outs[k],dev_target_data[i1][k])for k in range(len(outs))]
+            loss=dy.esum(loss)
+            losses.append(loss)
+            if i1%batch_size==0:
+                net_loss=dy.esum(losses) 
+                total_loss+=net_loss.value()              
+                losses=[]
+                dy.renew_cg()
+        print("Dev Loss: "+str(total_loss/len(dev_source_data)))
+        filename.write("Dev Loss: "+str(total_loss/len(dev_source_data)))
+        filename.flush()
 

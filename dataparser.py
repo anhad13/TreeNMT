@@ -2,15 +2,7 @@ import numpy as np
 import json
 import codecs
 import re
-import csv
-
-LABEL_MAP = {
-    "entailment": 0,
-    "neutral": 1,
-    "contradiction": 2,
-    # Used in the unlabeled test set---needs to map to some arbitrary label.
-    "hidden": 0,
-}
+import csv  
 
 def read_tree_dataset(filename, vocab):
     with open(filename) as f:
@@ -33,6 +25,18 @@ def read_plain_dataset(filename):
             dataset.append(tmp+[1])
     return dataset, vocab
 
+def read_plain_dataset_from_existing_vocab(filename, vocab):
+    dataset=[]
+    with open(filename) as f:
+        for x in f.readlines():
+            tmp=[]
+            for v in x.lower().split():
+                if v in vocab:
+                    tmp.append(vocab[v])
+                else:
+                    tmp.append(0)
+            dataset.append(tmp+[1])
+    return dataset
 
 def read_tree_line(line, vocab):
     to, tra=convert_binary_bracketing(line)
