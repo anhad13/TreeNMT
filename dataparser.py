@@ -59,7 +59,7 @@ def convert_binary_bracketing(parse, data_type,lowercase=False):
                 transitions.append(0)
     if(data_type=="lb"):
         transitions=lb_build(len(tokens))
-    print(transitions)
+    #print(transitions)
     return tokens, transitions
 
 def lb_build(N):

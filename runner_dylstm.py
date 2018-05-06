@@ -62,7 +62,7 @@ class EncoderTreeLSTM(object):
         f1 = dy.logistic(bf+Uf1*e1)
         f2 = dy.logistic(bf+Uf2*e2)
         u = dy.tanh(     bu+Uu*e)
-        c = dy.cmult(i,u) + dy.cmult(f1,c1) + dy.cmult(f2,c2)
+        c = dy.cmult(i,u) + dygmax*.cmult(f1,c1) + dy.cmult(f2,c2)
         h = dy.cmult(o,dy.tanh(c))
         if decorate: tree._e = h
         return h, c
@@ -82,6 +82,21 @@ class DecoderLSTM(object):
             prev_out=s.output()
             pre2=dy.parameter(self.pred)
             outputs.append(pre2*prev_out)
+        return outputs
+    def generate(self, context, trg, maxlen=100):
+        prev_out=dy.zeros((self.hdim))
+        outputs=[]
+        s=self.decoder_rnn.initial_state()
+        for i in range(maxlen):
+            emb=dy.concatenate([context, prev_out])
+            s=s.add_input(emb)
+            prev_out=s.output()
+            pre2=dy.parameter(self.pred)
+            act_value=pre2*prev_out
+            act_value=np.argmax(act_value.value())
+            outputs.append(act_value)
+            if act_value==1:
+                return outputs
         return outputs
 
 
@@ -116,65 +131,79 @@ encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
-filename=open("out."+data_type, "w")
+eval_only=True
+filename=open("out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
+filename_model=data_type+".ED"
 
 #source_data=dev_source_data
 #target_data=dev_target_data
-for epoch in range(num_epochs):
-    print("Starting Epoch: "+str(epoch))
-    filename.write("Starting Epoch: "+str(epoch))
-    for j in range(len(source_data)):
-        out_enc,c=encoder.expr_for_tree(source_data[j])
-        outs=decoder.decode(out_enc, target_data[j])
-        loss=[dy.pickneglogsoftmax(outs[k],target_data[j][k])for k in range(len(outs))]
-        loss=dy.esum(loss)
-        losses.append(loss)
-        #print(j)
-        if j%batch_size==0:
-            net_loss=dy.esum(losses)/batch_size 
-            net_loss.backward()
-            #pdb.set_trace()
-            try:
-                trainer.update()
-            except: 
-                pdb.set_trace()
-                print("Possible gradient overflow, skipping training example(s).")
-            difference=time.time()-start_time
-            print(str(j)+"---"+str(difference)+":")
-            filename.write(str(j)+"---"+str(difference)+":\n")
-            filename.flush()
-            losses=[]
-            dy.renew_cg()
-        if j>0 and j%eval_every==0:
-            total_loss=0.0
-            for i1 in range(len(dev_source_data)):
-                out_enc,c=encoder.expr_for_tree(dev_source_data[i1])
-                outs=decoder.decode(out_enc, dev_target_data[i1])
-                if i1==0:
-                    actual=">> "
-                    for k in outs:
-                        actual+= " "+str(np.argmax(k.value()))
-                    filename.write(actual+"\n")
-                    print(actual)
-                    filename.write("----\n")
-                    print("-----")
-                    filename.write(str(dev_target_data[i1])+"\n")
-                    print(str(dev_target_data[i1]))
-                loss=[dy.pickneglogsoftmax(outs[k],dev_target_data[i1][k])for k in range(len(outs))]
-                loss=dy.esum(loss)
-                losses.append(loss)
-                if i1%batch_size==0:
-                    net_loss=dy.esum(losses) 
-                    total_loss+=net_loss.value()              
-                    losses=[]
-                    dy.renew_cg()
-            print("Dev Loss: "+str(total_loss/len(dev_source_data)))
-            filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
-            filename.flush()
-	if j>0 and j%10000==0:
-		model.save(data_type+".ED")
-		filename.write("Saved Model.\n")
-		filename.flush()
+if eval_only:
+    model.populate(filename_model)
+    actual_results=[]
+    for i in range(len(dev_source_data)):
+       out_enc,c=encoder.expr_for_tree(dev_source_data[i]) 
+       outs=decoder.generate(out_enc, target_data[j])
+       actual_results.append(outs)
+       dy.renew_cg()
+    bl=bleu_evaluator.BLEUEvaluator(ngram=2).evaluate(dev_target_data, actual_results)
+    filename.write("BLEU Score: "+str(bl.value())+"\n")
+    filename.flush()
+else:
+    for epoch in range(num_epochs):
+        print("Starting Epoch: "+str(epoch))
+        filename.write("Starting Epoch: "+str(epoch))
+        for j in range(len(source_data)):
+            out_enc,c=encoder.expr_for_tree(source_data[j])
+            outs=decoder.decode(out_enc, target_data[j])
+            loss=[dy.pickneglogsoftmax(outs[k],target_data[j][k])for k in range(len(outs))]
+            loss=dy.esum(loss)
+            losses.append(loss)
+            #print(j)
+            if j%batch_size==0:
+                net_loss=dy.esum(losses)/batch_size 
+                net_loss.backward()
+                #pdb.set_trace()
+                try:
+                    trainer.update()
+                except: 
+                    pdb.set_trace()
+                    print("Possible gradient overflow, skipping training example(s).")
+                difference=time.time()-start_time
+                print(str(j)+"---"+str(difference)+":")
+                filename.write(str(j)+"---"+str(difference)+":\n")
+                filename.flush()
+                losses=[]
+                dy.renew_cg()
+            if j>0 and j%eval_every==0:
+                total_loss=0.0
+                for i1 in range(len(dev_source_data)):
+                    out_enc,c=encoder.expr_for_tree(dev_source_data[i1])
+                    outs=decoder.decode(out_enc, dev_target_data[i1])
+                    if i1==0:
+                        actual=">> "
+                        for k in outs:
+                            actual+= " "+str(np.argmax(k.value()))
+                        filename.write(actual+"\n")
+                        print(actual)
+                        filename.write("----\n")
+                        print("-----")
+                        filename.write(str(dev_target_data[i1])+"\n")
+                        print(str(dev_target_data[i1]))
+                    loss=[dy.pickneglogsoftmax(outs[k],dev_target_data[i1][k])for k in range(len(outs))]
+                    loss=dy.esum(loss)
+                    losses.append(loss)
+                    if i1%batch_size==0:
+                        net_loss=dy.esum(losses) 
+                        total_loss+=net_loss.value()              
+                        losses=[]
+                        dy.renew_cg()
+                print("Dev Loss: "+str(total_loss/len(dev_source_data)))
+                filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
+                filename.flush()
+    	if j>0 and j%10000==0:
+    		model.save(filename_model)
+    		filename.write("Saved Model.\n")
+    		filename.flush()

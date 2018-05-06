@@ -150,7 +150,8 @@ class BLEUEvaluator(Evaluator):
       if clipped_ngram_count[ngram_type] == 0:
         log_precision_score += -1e10
       else:
-        frac_score = clipped_ngram_count[ngram_type] / candidate_ngram_count[ngram_type]
+        frac_score = float(clipped_ngram_count[ngram_type]) / candidate_ngram_count[ngram_type]
+        #print(candidate_ngram_count[ngram_type])
         log_precision_score += self.weights[ngram_type - 1] * math.log(frac_score)
       frac_score_list.append("%.6f" % frac_score)
 
