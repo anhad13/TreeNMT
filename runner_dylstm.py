@@ -98,7 +98,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="gt"
+data_type="lb"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -116,7 +116,7 @@ encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
-filename=open("out.gt", "w")
+filename=open("out."+data_type, "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -175,6 +175,6 @@ for epoch in range(num_epochs):
             filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
             filename.flush()
 	if j>0 and j%10000==0:
-		model.save("GT.ED")
+		model.save(data_type+".ED")
 		filename.write("Saved Model.\n")
 		filename.flush()
