@@ -90,7 +90,7 @@ class DecoderLSTM(object):
 glovePath="/scratch/am8676/glove.840B.300d.txt"
 source_train_file="data/enpr.s"
 destination_train_file="data/trainde.s"
-dev_source="data/dev_en.s"
+dev_source="data/dev_enp.s"
 dev_target="data/dev_de.s"
 print("Building source vocab.")
 source_vocab = glove2dict(glovePath)
@@ -98,12 +98,13 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
+data_type="gt"
 print("Loading Source Data")
-source_data= dataparser.read_tree_dataset(source_train_file, source_vocab)
+source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
 target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
 print("Loading Dev Source")
-dev_source_data=dataparser.read_tree_dataset(dev_source, source_vocab)
+dev_source_data=dataparser.read_tree_dataset(dev_source, source_vocab, data_type=data_type)
 print("Loading Dev Target")
 dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
@@ -173,7 +174,7 @@ for epoch in range(num_epochs):
             print("Dev Loss: "+str(total_loss/len(dev_source_data)))
             filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
             filename.flush()
-	if j%10000==0:
+	if j>0 and j%10000==0:
 		model.save("GT.ED")
 		filename.write("Saved Model.\n")
 		filename.flush()

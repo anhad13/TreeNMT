@@ -4,10 +4,10 @@ import codecs
 import re
 import csv  
 
-def read_tree_dataset(filename, vocab):
+def read_tree_dataset(filename, vocab, data_type="gt"):
     with open(filename) as f:
         document=f.readlines()
-    return [read_tree_line(x, vocab) for x in document]
+    return [read_tree_line(x, vocab, data_type) for x in document]
 
 def read_plain_dataset(filename):
     vocab={}
@@ -38,12 +38,12 @@ def read_plain_dataset_from_existing_vocab(filename, vocab):
             dataset.append(tmp+[1])
     return dataset
 
-def read_tree_line(line, vocab):
-    to, tra=convert_binary_bracketing(line)
+def read_tree_line(line, vocab, data_type):
+    to, tra=convert_binary_bracketing(line, data_type)
     return convert_to_tree(to, tra, vocab)
 
 
-def convert_binary_bracketing(parse, lowercase=False):
+def convert_binary_bracketing(parse, data_type,lowercase=False):
     transitions = []
     tokens = []
     for word in parse.split(' '):
@@ -57,8 +57,16 @@ def convert_binary_bracketing(parse, lowercase=False):
                 else:
                     tokens.append(word)
                 transitions.append(0)
+    if(data_type=="lb"):
+        transitions=lb_build(len(tokens))
+    print(transitions)
     return tokens, transitions
 
+def lb_build(N):
+      if N==2:
+          return [0,0,1]
+      else:
+          return lb_build(N-1)+[0,1]
 
 def convert_to_tree(tokens,transitions, vocab):
     h=[]
