@@ -86,8 +86,8 @@ class DecoderLSTM(object):
 
 
 
-glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
-#glovePath="/scratch/am8676/glove.840B.300d.txt"
+#glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+glovePath="/scratch/am8676/glove.840B.300d.txt"
 source_train_file="data/enpr.s"
 destination_train_file="data/trainde.s"
 dev_source="data/dev_en.s"
@@ -108,17 +108,17 @@ print("Loading Dev Target")
 dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
 batch_size=64
-eval_every=batch_size*10
+eval_every=batch_size*20
 trainer = dy.AdamTrainer(model, 0.001)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
-filename=open("out.f", "w")
+filename=open("out.gt", "w")
 start_time=time.time()
 losses=[]
-num_epochs=5
+num_epochs=10
 
 #source_data=dev_source_data
 #target_data=dev_target_data
@@ -173,3 +173,7 @@ for epoch in range(num_epochs):
             print("Dev Loss: "+str(total_loss/len(dev_source_data)))
             filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
             filename.flush()
+	if j%10000==0:
+		model.save("GT.ED")
+		filename.write("Saved Model.\n")
+		filename.flush()
