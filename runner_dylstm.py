@@ -62,7 +62,7 @@ class EncoderTreeLSTM(object):
         f1 = dy.logistic(bf+Uf1*e1)
         f2 = dy.logistic(bf+Uf2*e2)
         u = dy.tanh(     bu+Uu*e)
-        c = dy.cmult(i,u) + dygmax*.cmult(f1,c1) + dy.cmult(f2,c2)
+        c = dy.cmult(i,u) + dy.cmult(f1,c1) + dy.cmult(f2,c2)
         h = dy.cmult(o,dy.tanh(c))
         if decorate: tree._e = h
         return h, c
@@ -132,7 +132,7 @@ decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=True
-filename=open("out."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("v2out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -145,10 +145,14 @@ if eval_only:
     actual_results=[]
     for i in range(len(dev_source_data)):
        out_enc,c=encoder.expr_for_tree(dev_source_data[i]) 
-       outs=decoder.generate(out_enc, target_data[j])
+       outs=decoder.generate(out_enc, dev_target_data[i])
        actual_results.append(outs)
-       dy.renew_cg()
-    bl=bleu_evaluator.BLEUEvaluator(ngram=2).evaluate(dev_target_data, actual_results)
+       dy.renew_cg() 
+    print(actual_results)
+    filename.write(str(actual_results)) 
+    filename.write("-----")
+    filename.write(str(dev_target_data))
+    bl=bleu_evaluator(ngram=4).evaluate(dev_target_data, actual_results)
     filename.write("BLEU Score: "+str(bl.value())+"\n")
     filename.flush()
 else:
