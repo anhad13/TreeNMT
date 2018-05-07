@@ -8,6 +8,7 @@ import csv
 import dataparser
 from evaluator import BLEUEvaluator as bleu_evaluator
 import pdb
+from nltk.translate.bleu_score import sentence_bleu
 
 def glove2dict(src_filename):
     """GloVe Reader.
@@ -146,14 +147,15 @@ if eval_only:
     for i in range(len(dev_source_data)):
        out_enc,c=encoder.expr_for_tree(dev_source_data[i]) 
        outs=decoder.generate(out_enc, dev_target_data[i])
-       actual_results.append(outs)
+       actual_results.append(sentence_bleu([dev_target_data[i]],outs))
+       #actual_results.append(outs)
        dy.renew_cg() 
     print(actual_results)
-    filename.write(str(actual_results)) 
-    filename.write("-----")
-    filename.write(str(dev_target_data))
-    bl=bleu_evaluator(ngram=4).evaluate(dev_target_data, actual_results)
-    filename.write("BLEU Score: "+str(bl.value())+"\n")
+    # filename.write(str(actual_results)) 
+    # filename.write("-----")
+    # filename.write(str(dev_target_data))
+    # bl=bleu_evaluator(ngram=4).evaluate(dev_target_data, actual_results)
+    filename.write("BLEU Score: "+str(np.average(actual_results))+"\n")
     filename.flush()
 else:
     for epoch in range(num_epochs):
