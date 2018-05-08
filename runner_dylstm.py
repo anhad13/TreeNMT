@@ -138,7 +138,7 @@ start_time=time.time()
 losses=[]
 num_epochs=10
 filename_model="GT"+".ED"
-
+best_dev_loss=1000
 #source_data=dev_source_data
 #target_data=dev_target_data
 if eval_only:
@@ -211,10 +211,12 @@ else:
                         total_loss+=net_loss.value()              
                         losses=[]
                         dy.renew_cg()
-                print("Dev Loss: "+str(total_loss/len(dev_source_data)))
+                current_dev_loss=total_loss/len(dev_source_data)
+                if j%10000==0 and best_dev_loss>current_dev_loss:
+                    best_dev_loss=current_dev_loss
+                    filename.write("Saving Model.Checkpointing.\n")
+                    filename.flush()
+                    model.save(filename_model)
+                print("Dev Loss: "+str(current_dev_loss))
                 filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
                 filename.flush()
-    	if j>0 and j%10000==0:
-    		model.save(filename_model)
-    		filename.write("Saved Model.\n")
-    		filename.flush()
