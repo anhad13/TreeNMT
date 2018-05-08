@@ -212,7 +212,7 @@ else:
                         losses=[]
                         dy.renew_cg()
                 current_dev_loss=total_loss/len(dev_source_data)
-                if j%10000==0 and best_dev_loss>current_dev_loss:
+                if j%10000==0# and best_dev_loss>current_dev_loss:
                     best_dev_loss=current_dev_loss
                     filename.write("Saving Model.Checkpointing.\n")
                     filename.flush()
