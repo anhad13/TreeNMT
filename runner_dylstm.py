@@ -114,7 +114,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="lb"
+data_type="gt"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -137,7 +137,7 @@ filename=open("v2out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
-filename_model=data_type+".ED"
+filename_model="GT"+".ED"
 
 #source_data=dev_source_data
 #target_data=dev_target_data
@@ -149,6 +149,11 @@ if eval_only:
        outs=decoder.generate(out_enc, dev_target_data[i])
        actual_results.append(sentence_bleu([dev_target_data[i]],outs))
        #actual_results.append(outs)
+       filename.write(str(outs))
+       filename.write("----")
+       filename.write(str(dev_target_data[i]))
+       filename.write("BLEU: "+str(sentence_bleu([dev_target_data[i]],outs)))
+       filename.flush()
        dy.renew_cg() 
     print(actual_results)
     # filename.write(str(actual_results)) 
