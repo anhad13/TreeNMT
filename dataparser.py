@@ -59,6 +59,8 @@ def convert_binary_bracketing(parse, data_type,lowercase=False):
                 transitions.append(0)
     if(data_type=="lb"):
         transitions=lb_build(len(tokens))
+    elif(data_type=="bal"):
+        transitions=balanced_transitions(len(tokens))
     #print(transitions)
     return tokens, transitions
 
@@ -67,6 +69,22 @@ def lb_build(N):
           return [0,0,1]
       else:
           return lb_build(N-1)+[0,1]
+
+def balanced_transitions(N):
+        """
+        Recursively creates a balanced binary tree with N
+        leaves using shift reduce transitions.
+        """
+        if N == 3:
+            return [0, 0, 1, 0, 1]
+        elif N == 2:
+            return [0, 0, 1]
+        elif N == 1:
+            return [0]
+        else:
+            right_N = N // 2
+            left_N = N - right_N
+            return balanced_transitions(left_N) + balanced_transitions(right_N) + [1]
 
 def convert_to_tree(tokens,transitions, vocab):
     h=[]
