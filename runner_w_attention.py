@@ -120,14 +120,29 @@ class DecoderAttentionLSTM(object):
             outputs.append(pre2*prev_out)
         return outputs
     def generate(self, context, trg, maxlen=150):
+        decode(self, h_a, trg, decorate=False):
+        h_a+=([dy.zeros(self.hdim)]*(self.max_len-len(h_a)))#padding to make equal to maxlength
+        h_ak=dy.concatenate(h_a, 1)
+        #pdb.set_trace()
+        pre_attend=dy.parameter(self.pre_attend)
+        context=h_ak*pre_attend
         prev_out=dy.zeros((self.hdim))
         outputs=[]
         s=self.decoder_rnn.initial_state()
         for i in range(maxlen):
-            emb=dy.concatenate([context, prev_out])
+            attender=dy.parameter(self.attender)
+            #pdb.set_trace()
+            V=dy.parameter(self.v)
+            tmp=dy.tanh(dy.colwise_add(context, V*prev_out))
+            U=dy.parameter(self.u)
+            attention_weights=dy.softmax(dy.transpose(U*tmp))
+            #pdb.set_trace()
+            emb=dy.concatenate([h_ak*attention_weights, prev_out])
             s=s.add_input(emb)
             prev_out=s.output()
             pre2=dy.parameter(self.pred)
+            pre2*prev_out
+            outputs.append(pre2*prev_out)
             act_value=pre2*prev_out
             act_value=np.argmax(act_value.value())
             outputs.append(act_value)
@@ -179,8 +194,11 @@ filename_model=data_type+".EDA"
 if eval_only:
     model.populate(filename_model)
     actual_results=[]
+    skipped_ex=0
     for i in range(len(dev_source_data)):
-       out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i]) 
+       out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i])
+       if len(ha)>100:
+            continue
        outs=decoder.generate(ha, dev_target_data[i])
        actual_results.append(sentence_bleu([dev_target_data[i]],outs))
        dy.renew_cg() 
