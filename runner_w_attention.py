@@ -137,8 +137,8 @@ class DecoderAttentionLSTM(object):
 
 
 
-glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
-#glovePath="/scratch/am8676/glove.840B.300d.txt"
+#glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+glovePath="/scratch/am8676/glove.840B.300d.txt"
 source_train_file="data/enpr.s"
 destination_train_file="data/trainde.s"
 dev_source="data/dev_enp.s"
@@ -149,7 +149,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="lb"
+data_type="bal"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -168,7 +168,7 @@ decoder = DecoderAttentionLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=False
-filename=open("v2out."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("Av2out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -242,7 +242,7 @@ else:
                 print("Dev Loss: "+str(total_loss/len(dev_source_data)))
                 filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
                 filename.flush()
-        	if j%10000==0:
-        		model.save(filename_model)
-        		filename.write("Saved Model.\n")
-        		filename.flush()
+            if j%10000==0:
+        	model.save(filename_model)
+        	filename.write("Saved Model.\n")
+        	filename.flush()
