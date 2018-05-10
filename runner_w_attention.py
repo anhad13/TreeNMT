@@ -149,7 +149,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="bal"
+data_type="gt"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -191,9 +191,11 @@ else:
     for epoch in range(num_epochs):
         print("Starting Epoch: "+str(epoch))
         filename.write("Starting Epoch: "+str(epoch))
+        skipped=0
         for j in range(len(source_data)):
             out_enc,c, ha=encoder.expr_for_tree(source_data[j])
             if(len(ha)>100):
+                skipped+=1
                 print("Skipping > maxlen")
                 filename.write("Skipped training ex. ")
                 filename.flush()
@@ -203,7 +205,8 @@ else:
             loss=dy.esum(loss)
             losses.append(loss)
             if j%batch_size==0:
-                net_loss=dy.esum(losses)/batch_size 
+                net_loss=dy.esum(losses)/batch_size-skipped
+                skipped=0 
                 net_loss.backward()
                 try:
                     trainer.update()
@@ -218,8 +221,12 @@ else:
                 dy.renew_cg()
             if j>0 and j%eval_every==0:
                 total_loss=0.0
+                skipped_dev=0
                 for i1 in range(len(dev_source_data)):
                     out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i1])
+                    if len(ha)>100:
+                        skipped_dev+=1
+                        continue
                     outs=decoder.decode(ha, dev_target_data[i1])
                     if i1==0:
                         actual=">> "
@@ -239,8 +246,8 @@ else:
                         total_loss+=net_loss.value()              
                         losses=[]
                         dy.renew_cg()
-                print("Dev Loss: "+str(total_loss/len(dev_source_data)))
-                filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
+                print("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev)))
+                filename.write("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev))+"\n")
                 filename.flush()
             if j%10000==0:
         	model.save(filename_model)
