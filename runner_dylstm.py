@@ -114,7 +114,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="gt"
+data_type="bal"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -137,7 +137,7 @@ filename=open("v2out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
-filename_model="GT"+".ED"
+filename_model="bal.ED"
 best_dev_loss=1000
 #source_data=dev_source_data
 #target_data=dev_target_data
@@ -212,11 +212,11 @@ else:
                         losses=[]
                         dy.renew_cg()
                 current_dev_loss=total_loss/len(dev_source_data)
-                if j%10000==0# and best_dev_loss>current_dev_loss:
-                    best_dev_loss=current_dev_loss
-                    filename.write("Saving Model.Checkpointing.\n")
-                    filename.flush()
-                    model.save(filename_model)
-                print("Dev Loss: "+str(current_dev_loss))
-                filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
+		print("Dev Loss: "+str(current_dev_loss))
+		filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
+		filename.flush()
+            if j%10000==0:# and best_dev_loss>current_dev_loss:
+                #best_dev_loss=current_dev_loss
+                filename.write("Saving Model.Checkpointing.\n")
                 filename.flush()
+                model.save(filename_model)

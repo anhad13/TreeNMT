@@ -119,8 +119,8 @@ class DecoderAttentionLSTM(object):
             pre2=dy.parameter(self.pred)
             outputs.append(pre2*prev_out)
         return outputs
-    def generate(self, context, trg, maxlen=150):
-        decode(self, h_a, trg, decorate=False):
+    def generate(self, h_a, trg, maxlen=100):
+        #decode(self, h_a, trg, decorate=False):
         h_a+=([dy.zeros(self.hdim)]*(self.max_len-len(h_a)))#padding to make equal to maxlength
         h_ak=dy.concatenate(h_a, 1)
         #pdb.set_trace()
@@ -182,7 +182,7 @@ encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderAttentionLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
-eval_only=False
+eval_only=True
 filename=open("Av2out."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
