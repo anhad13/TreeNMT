@@ -188,7 +188,7 @@ start_time=time.time()
 losses=[]
 num_epochs=10
 filename_model=data_type+".EDA"
-
+best_devbleu=0.0
 #source_data=dev_source_data
 #target_data=dev_target_data
 if eval_only:
@@ -198,6 +198,7 @@ if eval_only:
     for i in range(len(dev_source_data)):
        out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i])
        if len(ha)>100:
+            filename.write("")
             continue
        outs=decoder.generate(ha, dev_target_data[i])
        actual_results.append(sentence_bleu([dev_target_data[i]],outs))
@@ -268,6 +269,26 @@ else:
                 filename.write("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev))+"\n")
                 filename.flush()
             if j%10000==0:
-        	model.save(filename_model)
-        	filename.write("Saved Model.\n")
-        	filename.flush()
+                actual_results=[]
+                skipped_ex=[]
+                for i in range(len(dev_source_data)):
+                   out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i])
+                   if len(ha)>100:
+                        skipped_ex.append()
+                        continue
+                   outs=decoder.generate(ha, dev_target_data[i])
+                   actual_results.append(sentence_bleu([dev_target_data[i]],outs))
+                   dy.renew_cg() 
+                print(actual_results)
+                newbleu=np.average(actual_results)
+                filename.write("BLEU Score: "+str(newbleu)+"\n")
+                filename.write("Skipped some devs: "+str(actual_results))
+                filename.flush()
+                if best_devbleu<newbleu:
+                    best_devbleu=newbleu
+                    model.save(filename_model)
+                    filename.write("Saved Model.\n")
+                    filename.flush()
+                else:
+                    filename.write("No imp in Bleu from "+str(best_devbleu))
+                    filename.flush()
