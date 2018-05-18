@@ -164,7 +164,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="gt"
+data_type="bal"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -183,12 +183,13 @@ decoder = DecoderAttentionLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=True
-filename=open("Av2out."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("v3."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
 filename_model=data_type+".EDA"
 best_devbleu=0.0
+bleu_every=batch_size*5
 #source_data=dev_source_data
 #target_data=dev_target_data
 if eval_only:
@@ -268,25 +269,30 @@ else:
                 print("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev)))
                 filename.write("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev))+"\n")
                 filename.flush()
-            if j%10000==0:
+            if j>0 and j%bleu_every==0:
                 actual_results=[]
                 skipped_ex=[]
                 for i in range(len(dev_source_data)):
                    out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i])
                    if len(ha)>100:
-                        skipped_ex.append()
+                        skipped_ex.append(i)
                         continue
                    outs=decoder.generate(ha, dev_target_data[i])
+		   #filename.write(str(outs))
+                   #filename.write("-------")
+		   #filename.write(str(dev_target_data[i]))
+		   #filename.write(str(sentence_bleu([dev_target_data[i]],outs)))
+		   #filename.flush()
                    actual_results.append(sentence_bleu([dev_target_data[i]],outs))
                    dy.renew_cg() 
                 print(actual_results)
                 newbleu=np.average(actual_results)
                 filename.write("BLEU Score: "+str(newbleu)+"\n")
-                filename.write("Skipped some devs: "+str(actual_results))
+                filename.write("Skipped some devs: "+str(skipped_ex))
                 filename.flush()
                 if best_devbleu<newbleu:
                     best_devbleu=newbleu
-                    model.save(filename_model)
+                    #model.save(filename_model)
                     filename.write("Saved Model.\n")
                     filename.flush()
                 else:
