@@ -125,7 +125,7 @@ print("Loading Dev Target")
 dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
 batch_size=64
-eval_every=batch_size*20
+eval_every=batch_size*50
 trainer = dy.AdamTrainer(model, 0.001)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
@@ -133,7 +133,7 @@ decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=True
-filename=open("v2out."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("SED."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -156,10 +156,6 @@ if eval_only:
        filename.flush()
        dy.renew_cg() 
     print(actual_results)
-    # filename.write(str(actual_results)) 
-    # filename.write("-----")
-    # filename.write(str(dev_target_data))
-    # bl=bleu_evaluator(ngram=4).evaluate(dev_target_data, actual_results)
     filename.write("BLEU Score: "+str(np.average(actual_results))+"\n")
     filename.flush()
 else:
@@ -189,34 +185,15 @@ else:
                 losses=[]
                 dy.renew_cg()
             if j>0 and j%eval_every==0:
-                total_loss=0.0
-                for i1 in range(len(dev_source_data)):
-                    out_enc,c=encoder.expr_for_tree(dev_source_data[i1])
-                    outs=decoder.decode(out_enc, dev_target_data[i1])
-                    if i1==0:
-                        actual=">> "
-                        for k in outs:
-                            actual+= " "+str(np.argmax(k.value()))
-                        filename.write(actual+"\n")
-                        print(actual)
-                        filename.write("----\n")
-                        print("-----")
-                        filename.write(str(dev_target_data[i1])+"\n")
-                        print(str(dev_target_data[i1]))
-                    loss=[dy.pickneglogsoftmax(outs[k],dev_target_data[i1][k])for k in range(len(outs))]
-                    loss=dy.esum(loss)
-                    losses.append(loss)
-                    if i1%batch_size==0:
-                        net_loss=dy.esum(losses) 
-                        total_loss+=net_loss.value()              
-                        losses=[]
-                        dy.renew_cg()
-                current_dev_loss=total_loss/len(dev_source_data)
-		print("Dev Loss: "+str(current_dev_loss))
-		filename.write("Dev Loss: "+str(total_loss/len(dev_source_data))+"\n")
-		filename.flush()
-            if j%10000==0:# and best_dev_loss>current_dev_loss:
-                #best_dev_loss=current_dev_loss
+                actual_results=[]
+                for i in range(len(dev_source_data)):
+                   out_enc,c=encoder.expr_for_tree(dev_source_data[i]) 
+                   outs=decoder.generate(out_enc, dev_target_data[i])
+                   actual_results.append(sentence_bleu([dev_target_data[i]],outs))
+                   dy.renew_cg() 
+                filename.write("BLEU Score: "+str(np.average(actual_results))+"\n")
+                filename.flush()
+            if j%10000==0:
                 filename.write("Saving Model.Checkpointing.\n")
                 filename.flush()
                 model.save(filename_model)
