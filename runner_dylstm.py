@@ -188,14 +188,13 @@ else:
                 actual_results=[]
                 for i in range(len(dev_source_data)):
                    out_enc,c=encoder.expr_for_tree(dev_source_data[i])
-		   filename.write("doing")
-		   filename.flush()
                    outs=decoder.generate(out_enc, dev_target_data[i])
-                   actual_results.append(sentence_bleu([dev_target_data[i]],outs))
+                   actual_results.append(bleu_evaluator().evaluate([[dev_target_data[i]],[out_enc]).value())
+                   #actual_results.append(sentence_bleu([dev_target_data[i]],outs))
                    #dy.renew_cg() 
                 filename.write("BLEU Score: "+str(np.average(actual_results))+"\n")
                 filename.flush()
-		dy.renew_cg()
+                dy.renew_cg()
             if j>0 and j%10000==0:
                 filename.write("Saving Model.Checkpointing.\n")
                 filename.flush()
