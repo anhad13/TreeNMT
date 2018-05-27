@@ -114,7 +114,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="lb"
+data_type="bal"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -125,8 +125,8 @@ print("Loading Dev Target")
 dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
 batch_size=64
-eval_every=batch_size*15
-trainer = dy.AdamTrainer(model, 0.001)
+eval_every=batch_size*200
+trainer = dy.AdamTrainer(model, 0.0005)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
@@ -137,7 +137,7 @@ filename=open("SED."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
-filename_model=data_type+".baz"
+filename_model=data_type+".baz_llr"
 best_dev_loss=1000
 #source_data=dev_source_data
 #target_data=dev_target_data
@@ -199,4 +199,4 @@ else:
             if j>0 and j%10000==0:
                 filename.write("Saving Model.Checkpointing.\n")
                 filename.flush()
-                model.save(filename_model)
+                #model.save(filename_model)
