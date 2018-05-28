@@ -182,14 +182,14 @@ encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderAttentionLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
-eval_only=True
+eval_only=False
 filename=open("v3."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
 filename_model=data_type+".EDA"
 best_devbleu=0.0
-bleu_every=batch_size*5
+bleu_every=batch_size*200
 #source_data=dev_source_data
 #target_data=dev_target_data
 if eval_only:
@@ -239,36 +239,6 @@ else:
                 filename.flush()
                 losses=[]
                 dy.renew_cg()
-            if j>0 and j%eval_every==0:
-                total_loss=0.0
-                skipped_dev=0
-                for i1 in range(len(dev_source_data)):
-                    out_enc,c, ha=encoder.expr_for_tree(dev_source_data[i1])
-                    if len(ha)>100:
-                        skipped_dev+=1
-                        continue
-                    outs=decoder.decode(ha, dev_target_data[i1])
-                    if i1==0:
-                        actual=">> "
-                        for k in outs:
-                            actual+= " "+str(np.argmax(k.value()))
-                        filename.write(actual+"\n")
-                        print(actual)
-                        filename.write("----\n")
-                        print("-----")
-                        filename.write(str(dev_target_data[i1])+"\n")
-                        print(str(dev_target_data[i1]))
-                    loss=[dy.pickneglogsoftmax(outs[k],dev_target_data[i1][k])for k in range(len(outs))]
-                    loss=dy.esum(loss)
-                    losses.append(loss)
-                    if i1%batch_size==0:
-                        net_loss=dy.esum(losses) 
-                        total_loss+=net_loss.value()              
-                        losses=[]
-                        dy.renew_cg()
-                print("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev)))
-                filename.write("Dev Loss: "+str(total_loss/(len(dev_source_data)-skipped_dev))+"\n")
-                filename.flush()
             if j>0 and j%bleu_every==0:
                 actual_results=[]
                 skipped_ex=[]
@@ -278,23 +248,11 @@ else:
                         skipped_ex.append(i)
                         continue
                    outs=decoder.generate(ha, dev_target_data[i])
-		   #filename.write(str(outs))
-                   #filename.write("-------")
-		   #filename.write(str(dev_target_data[i]))
-		   #filename.write(str(sentence_bleu([dev_target_data[i]],outs)))
-		   #filename.flush()
-                   actual_results.append(sentence_bleu([dev_target_data[i]],outs))
-                   dy.renew_cg() 
-                print(actual_results)
+                   val=bleu_evaluator().evaluate([dev_target_data[i]],[outs]).value()
+                   if val==None:
+                        val=0.0
+                   actual_results.append(val)
+                dy.renew_cg() 
                 newbleu=np.average(actual_results)
                 filename.write("BLEU Score: "+str(newbleu)+"\n")
-                filename.write("Skipped some devs: "+str(skipped_ex))
                 filename.flush()
-                if best_devbleu<newbleu:
-                    best_devbleu=newbleu
-                    #model.save(filename_model)
-                    filename.write("Saved Model.\n")
-                    filename.flush()
-                else:
-                    filename.write("No imp in Bleu from "+str(best_devbleu))
-                    filename.flush()
