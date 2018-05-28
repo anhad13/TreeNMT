@@ -114,7 +114,7 @@ c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="bal"
+data_type="lb"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -126,14 +126,14 @@ dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, 
 model = dy.Model()
 batch_size=64
 eval_every=batch_size*200
-trainer = dy.AdamTrainer(model, 0.0005)
+trainer = dy.AdamTrainer(model, 0.001)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
 decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=False
-filename=open("SED."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("HIGHLRbazSED."+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -184,12 +184,16 @@ else:
                 filename.flush()
                 losses=[]
                 dy.renew_cg()
-            if j>0 and j%eval_every==0:
+            if j>=0 and j%eval_every==0:
                 actual_results=[]
                 for i in range(len(dev_source_data)):
                    out_enc,c=encoder.expr_for_tree(dev_source_data[i])
                    outs=decoder.generate(out_enc, dev_target_data[i])
-                   actual_results.append(bleu_evaluator().evaluate([[dev_target_data[i]],[out_enc]).value())
+                   val=bleu_evaluator().evaluate([dev_target_data[i]],[outs]).value()
+                   if val==None:
+		   	val=0.0
+ 		   actual_results.append(val)
+		   #actual_results.append(bleu_evaluator().evaluate([dev_target_data[i]],[outs]).value())
                    #actual_results.append(sentence_bleu([dev_target_data[i]],outs))
                    #dy.renew_cg() 
                 filename.write("BLEU Score: "+str(np.average(actual_results))+"\n")
