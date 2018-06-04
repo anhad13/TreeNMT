@@ -103,11 +103,18 @@ class DecoderLSTM(object):
 
 
 #glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
+target_type="chinese"
 glovePath="/scratch/am8676/glove.840B.300d.txt"
-source_train_file="data/enpr.s"
-destination_train_file="data/trainde.s"
-dev_source="data/dev_enp.s"
-dev_target="data/dev_de.s"
+if target_type=="german":
+    source_train_file="data/enpr.s"
+    destination_train_file="data/trainde.s"
+    dev_source="data/dev_enp.s"
+    dev_target="data/dev_de.s"
+elif target_type=="chinese":
+    source_train_file="data/train_ez.enp"
+    destination_train_file="data/train_ez.zh"
+    dev_source="data/dev_ez.enp"
+    dev_target="data/dev_ez.zh"
 print("Building source vocab.")
 source_vocab = glove2dict(glovePath)
 c1=1
@@ -118,12 +125,19 @@ data_type="lb"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
-target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
+if target_type=="chinese":
+    target_data, target_vocab = dataparser.read_plain_dataset_chinese(destination_train_file)
+else:
+    target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
 print("Loading Dev Source")
 dev_source_data=dataparser.read_tree_dataset(dev_source, source_vocab, data_type=data_type)
 print("Loading Dev Target")
-dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
+if target_type=="chinese":
+    dev_target_data = dataparser.read_plain_dataset_from_existing_vocab_chinese(dev_target, target_vocab)
+else:
+    dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
+#pdb.set_trace()
 batch_size=64
 eval_every=batch_size*200
 trainer = dy.AdamTrainer(model, 0.001)
@@ -133,7 +147,7 @@ decoder = DecoderLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=False
-filename=open("HIGHLRbazSED."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open(target_type+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
@@ -184,7 +198,7 @@ else:
                 filename.flush()
                 losses=[]
                 dy.renew_cg()
-            if j>=0 and j%eval_every==0:
+            if j>0 and j%eval_every==0:
                 actual_results=[]
                 for i in range(len(dev_source_data)):
                    out_enc,c=encoder.expr_for_tree(dev_source_data[i])

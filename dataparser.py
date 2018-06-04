@@ -38,6 +38,40 @@ def read_plain_dataset_from_existing_vocab(filename, vocab):
             dataset.append(tmp+[1])
     return dataset
 
+
+def read_plain_dataset_chinese(filename):
+    vocab={}
+    c=2
+    vocab["<s>"]=1 #to signify end of line.
+    dataset=[]
+    with open(filename) as f:
+        for x in f.readlines():
+            tmp=[]
+            for v in list(x.decode('utf-8')):
+                if v not in vocab:
+                    vocab[v]=c
+                    c+=1
+                tmp.append(vocab[v])
+            dataset.append(tmp+[1])
+    #import pdb;pdb.set_trace()
+    return dataset, vocab
+
+def read_plain_dataset_from_existing_vocab_chinese(filename, vocab):
+    dataset=[]
+    with open(filename) as f:
+        for x in f.readlines():
+            tmp=[]
+            for v in list(x.decode('utf-8')):
+                if v in vocab:
+                    tmp.append(vocab[v])
+                else:
+                    tmp.append(0)
+            dataset.append(tmp+[1])
+    return dataset
+
+
+
+
 def read_tree_line(line, vocab, data_type):
     to, tra=convert_binary_bracketing(line, data_type)
     return convert_to_tree(to, tra, vocab)
