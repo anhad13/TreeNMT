@@ -165,14 +165,21 @@ for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
 data_type="bal"
+target_type="chinese"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
-target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
+if target_type=="chinese":
+    target_data, target_vocab = dataparser.read_plain_dataset_chinese(destination_train_file)
+else:
+    target_data, target_vocab = dataparser.read_plain_dataset(destination_train_file)
 print("Loading Dev Source")
 dev_source_data=dataparser.read_tree_dataset(dev_source, source_vocab, data_type=data_type)
 print("Loading Dev Target")
-dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
+if target_type=="chinese":
+    dev_target_data = dataparser.read_plain_dataset_from_existing_vocab_chinese(dev_target, target_vocab)
+else:
+    dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
 batch_size=64
 eval_every=batch_size*20
@@ -183,7 +190,7 @@ decoder = DecoderAttentionLSTM(model, len(target_vocab)+1, 300)
 import time
 dy.renew_cg()
 eval_only=False
-filename=open("v3."+data_type+str(eval_only)+str(int(time.time())), "w")
+filename=open("va."+target_type+data_type+str(eval_only)+str(int(time.time())), "w")
 start_time=time.time()
 losses=[]
 num_epochs=10
