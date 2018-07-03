@@ -103,7 +103,7 @@ class DecoderLSTM(object):
 
 
 #glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
-target_type="chinese"
+target_type="arabic"
 glovePath="/scratch/am8676/glove.840B.300d.txt"
 if target_type=="german":
     source_train_file="data/enpr.s"
@@ -115,13 +115,18 @@ elif target_type=="chinese":
     destination_train_file="data/train_ez.zh"
     dev_source="data/dev_ez.enp"
     dev_target="data/dev_ez.zh"
+elif target_type=="arabic":
+    source_train_file="data/train_en_ar.enp"
+    destination_train_file="data/train_en_ar.ar"
+    dev_source="data/dev15_en_ar.enp"
+    dev_target="data/dev15_en_ar.ar"
 print("Building source vocab.")
 source_vocab = glove2dict(glovePath)
 c1=1
 for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
-data_type="lb"
+data_type="bal"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -137,9 +142,9 @@ if target_type=="chinese":
 else:
     dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
-#pdb.set_trace()
+pdb.set_trace()
 batch_size=64
-eval_every=batch_size*200
+eval_every=batch_size*400
 trainer = dy.AdamTrainer(model, 0.001)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
