@@ -102,7 +102,7 @@ def lb_build(N):
       if N==2:
           return [0,0,1]
       else:
-          return lb_build(N-1)+[0,1]
+          return [0,0,1]+(N-2)*[0,1]
 
 def balanced_transitions(N):
         """
