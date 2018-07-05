@@ -154,10 +154,10 @@ class DecoderAttentionLSTM(object):
 
 #glovePath="/Users/anhadmohananey/Downloads/glove/glove.6B.300d.txt"
 glovePath="/scratch/am8676/glove.840B.300d.txt"
-source_train_file="data/enpr.s"
-destination_train_file="data/trainde.s"
-dev_source="data/dev_enp.s"
-dev_target="data/dev_de.s"
+source_train_file="data/train_en_ar.enp"
+destination_train_file="data/train_en_ar.ar"
+dev_source="data/dev15_en_ar.enp"
+dev_target="data/dev15_en_ar.ar"
 print("Building source vocab.")
 source_vocab = glove2dict(glovePath)
 c1=1
@@ -165,7 +165,7 @@ for k in source_vocab.keys():
     source_vocab[k]=c1
     c1+=1
 data_type="bal"
-target_type="chinese"
+target_type="arabic"
 print("Loading Source Data")
 source_data= dataparser.read_tree_dataset(source_train_file, source_vocab, data_type=data_type)
 print("Loading Target Data")
@@ -182,7 +182,7 @@ else:
     dev_target_data = dataparser.read_plain_dataset_from_existing_vocab(dev_target, target_vocab)
 model = dy.Model()
 batch_size=64
-eval_every=batch_size*20
+eval_every=batch_size*200
 trainer = dy.AdamTrainer(model, 0.001)
 #trainer.set_clip_threshold(-1.0)
 encoder = EncoderTreeLSTM(model, len(source_vocab)+1, 300, 300)
